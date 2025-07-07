@@ -1,20 +1,21 @@
+import os
+from dotenv import load_dotenv
 import psycopg2
+
+# Загружаем .env
+load_dotenv()
 
 def get_product_data(kaspi_code="AZIMA-Parago-00034"):
     conn = psycopg2.connect(
-        dbname="azima_store",
-        user="postgres",
-        password="Чуть подождем с этим, а пока просто запушим",
-        host="localhost",
-        port="5432"
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT")
     )
     cursor = conn.cursor()
 
-    query = """
-    SELECT * FROM products
-    WHERE kaspi_code = %s
-    """
-    cursor.execute(query, (kaspi_code,))
+    cursor.execute("SELECT * FROM products WHERE kaspi_code = %s", (kaspi_code,))
     row = cursor.fetchone()
 
     cursor.close()
@@ -28,5 +29,4 @@ def get_product_data(kaspi_code="AZIMA-Parago-00034"):
             "insert_material", "country", "weight_grams", "vendor_code", "price_yuan"
         ]
         return dict(zip(columns, row))
-    else:
-        return None
+    return None
