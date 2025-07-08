@@ -1,5 +1,6 @@
 import asyncio
 from playwright.async_api import async_playwright
+from db_handler import get_product_data
 
 async def main():
     async with async_playwright() as p:
@@ -8,6 +9,11 @@ async def main():
         page = await context.new_page()
 
         await page.goto("https://kaspi.kz/mc/#/orders?status=NEW")
+        await page.click('text="Телефон"')
+        await page.wait_for_selector('#user_phone_field', timeout=30000)
+        await page.fill('#user_phone_field', '77713362613')
+        await page.click('button:has-text("Продолжить")')
+
         print("[✓] Kaspi кабинет открыт. Войди вручную и нажми ENTER в консоли, когда будешь на главной панели.")
         input()
 
@@ -24,7 +30,7 @@ async def main():
             await page.click('text="Создать новый товар"')
             await page.wait_for_timeout(2000)
 
-            # 4. Нажимаем на категорию (например, Украшения → Бижутерия → Колье)
+            # 4. Выбор категорий: Украшения → Бижутерия → Колье
             await page.click('text="Украшения"')
             await page.wait_for_timeout(500)
             await page.click('text="Бижутерия"')
@@ -37,8 +43,48 @@ async def main():
             await page.wait_for_timeout(3000)
 
             print("[✓] Готово. Страница заполнения карточки открыта.")
+            # Ждём, пока появится поле "Название товара"
+            await page.wait_for_selector('xpath=//div[contains(text(), "Название товара")]/following::input[@type="text" and contains(@class, "input")]', timeout=60000)
+
+            product = get_product_data("AZIMA-Parago-00034")
+            if not product:
+                print("[!] Ошибка: товар не найден в БД.")
+                return
+
+            # Заполняем только "Название товара"
+            await page.fill(
+                'xpath=//div[contains(text(), "Название товара")]/following::input[@type="text" and contains(@class, "input")]',
+                product["kaspi_code"]
+            )
+
+            print("[✓] Название товара успешно заполнено.")
+
+
+
+            # 6. Подтверждение перед заполнением следующих полей
+            print("\n[Данные для подтверждения]")
+            print(f"Бренд: {product['brand']}")
+            print(f"Описание товара:\n{product['description']}")
+            confirm = input("Продолжить заполнение? (Y/N): ")
+            if confirm.strip().upper() != "Y":
+                print("[⛔] Операция отменена пользователем.")
+                return
+
+            # 7. Заполнение бренда
+            await page.click('xpath=//div[contains(text(), "Бренд")]/following::input[@type="text"][1]')
+            await page.fill('xpath=//div[contains(text(), "Бренд")]/following::input[@type="text"][1]', product["brand"])
+            await page.wait_for_timeout(1000)  # даем время на подгрузку выпадающего списка
+            await page.click(f'text="{product["brand"]}"')
+            print("[✓] Бренд заполнен.")
+
+            # 8. Заполнение описания
+            await page.fill('xpath=//div[contains(text(), "Описание товара")]/following::textarea[1]', product["description"])
+            print("[✓] Описание товара заполнено.")
+
+
+
         except Exception as e:
-            print(f"[!] Ошибка при кликах: {e}")
+            print(f"[!] Ошибка во время выполнения: {e}")
 
         await asyncio.sleep(99999)
 
