@@ -31,12 +31,12 @@ async def main():
             await page.wait_for_timeout(2000)
 
             # 4. Выбор категорий: Украшения → Бижутерия → Колье
-            await page.click('text="Украшения"')
+            kolye_buttons = page.locator('text="Колье"')
+            await kolye_buttons.nth(0).click()
             await page.wait_for_timeout(500)
-            await page.click('text="Бижутерия"')
-            await page.wait_for_timeout(500)
-            await page.click('text="Колье"')
-            await page.wait_for_timeout(1000)
+            await kolye_buttons.nth(1).click()
+
+
 
             # 5. Кнопка "Далее"
             await page.click('button:has-text("Далее")')
@@ -89,3 +89,11 @@ async def main():
         await asyncio.sleep(99999)
 
 asyncio.run(main())
+
+async def click_category_chain(page, categories: list[str]):
+    for i=0, i<len(categories), i++:
+        cat = categories[i]
+        await page.click(f'text="{cat}"')
+        await page.wait_for_timeout(500)
+        if i=1:
+            if 
