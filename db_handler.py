@@ -1,11 +1,10 @@
+import psycopg2
 import os
 from dotenv import load_dotenv
-import psycopg2
 
-# Загружаем .env
 load_dotenv()
 
-def get_product_data(kaspi_code="AZIMA-Parago-00034"):
+def get_category_path(category_id):
     conn = psycopg2.connect(
         dbname=os.getenv("DB_NAME"),
         user=os.getenv("DB_USER"),
@@ -13,20 +12,19 @@ def get_product_data(kaspi_code="AZIMA-Parago-00034"):
         host=os.getenv("DB_HOST"),
         port=os.getenv("DB_PORT")
     )
-    cursor = conn.cursor()
+    cur = conn.cursor()
+    path = []
 
-    cursor.execute("SELECT * FROM products WHERE kaspi_code = %s", (kaspi_code,))
-    row = cursor.fetchone()
+    while category_id:
+        cur.execute("SELECT name, parent_id FROM categories WHERE id = %s", (category_id,))
+        row = cur.fetchone()
+        if not row:
+            break
+        name, parent_id = row
+        if name:  # если это конечная категория — используем её
+            path.insert(0, name)
+        category_id = parent_id
 
-    cursor.close()
+    cur.close()
     conn.close()
-
-    if row:
-        columns = [
-            "id", "kaspi_code", "name_cn", "category_1", "category_2", "category_3", "brand",
-            "description", "image_paths", "material_pendant", "length_cm", "type",
-            "color_metal", "color_insert", "gender", "assay", "material",
-            "insert_material", "country", "weight_grams", "vendor_code", "price_yuan"
-        ]
-        return dict(zip(columns, row))
-    return None
+    return path
